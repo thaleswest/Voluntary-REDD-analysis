@@ -1,8 +1,8 @@
 "-------------------------------------------------------------------------------------------"
 " CODE TO FIX CLOUD COVER AND NON-FOREST-TO-FOREST TRANSITION IN ORIGIONAL MAPBIOMAS + SPLIT"
 "-------------------------------------------------------------------------------------------"
-library(raster)
-library(rgdal)
+require(raster)
+require(rgdal)
 #Previous steps: [1] reclassification in ArcGIS; [2] raster split in ArcGIS
 #Note: A test can be run based on fake rasters (STEP 0), but first make sure to comment/uncomment the right code lines!
 
@@ -571,56 +571,102 @@ ggplot(subset(def, year > 1999 & year <= 2017), aes(x=year, y=def*0.0009)) + geo
 "-------------------------------------------------------------------------------"
 # rm(list=ls()) #clear all
 # require(raster)
-# #setwd("F:/Data/Forest cover datasets/MapBiomas/Colection 3 - Amazonia stack 1985-2017/Final/Municipalities")
-# setwd("//cifs5200/USER/WestT/Documents/Desktop/Mapbiomas")
-# munic <- raster("munic2")
-# #writeRaster(munic, filename = "munic.tiff")
-# #freq(munic)
-#
-# setwd("//cifs5200/USER/WestT/Documents/Desktop/Mapbiomas/Final_2/")
-# files = list.files(pattern="*.tif") #select raster names for the loop
-#
-# r <- raster(files[1]) #structure for the loop
-# r[ r != 1 ] <- 0
-# res <- as.data.frame(zonal(r, munic, fun=sum, na.rm=T))
-#
-# for (i in 2:length(files)){
-#   r <- raster(files[[i]])
-#   r[ r != 1 ] <- 0
-#   res[,c(i+1)] <- zonal(r, munic, fun=sum, na.rm=T)[,2]
+# #ignore _5" and "_11"tiles because they have no data
+# names <- c("*_1.tif","*_2.tif","*_3.tif","*_4.tif","*_6.tif","*_7.tif","*_8.tif","*_9.tif","*_10.tif",
+#            "*_12.tif","*_13.tif","*_14.tif","*_15.tif","*_16.tif","*_17.tif","*_18.tif","*_19.tif",
+#            "*_20.tif","*_21.tif","*_22.tif","*_23.tif","*_24.tif","*_25.tif","*_26.tif","*_27.tif","*_28.tif")
+# 
+# muni_tiles <- c("state_1.TIF","state_2.TIF","state_3.TIF","state_4.TIF","state_6.TIF","state_7.TIF", #equivalent tiles with municipality zones
+#                 "state_8.TIF","state_9.TIF","state_10.TIF","state_12.TIF","state_13.TIF","state_14.TIF",
+#                 "state_15.TIF","state_16.TIF","state_17.TIF","state_18.TIF","state_19.TIF","state_20.TIF","state_21.TIF",
+#                 "state_22.TIF","state_23.TIF","state_24.TIF","state_25.TIF","state_26.TIF","state_27.TIF","state_28.TIF")
+# 
+# res <- as.data.frame(matrix(NA,0,3)) #table to save results
+# colnames(res) <- c("zone","forest","year_tile")
+# 
+# for (j in 1:length(names)) { #each name in the list is a raster tile
+#   setwd("C:/Users/WestT/OneDrive - scion/Desktop/Mapbiomas_4.1/states_mask/amazon_state_split/")
+#   muni_mask <- raster(muni_tiles[j]) #create a municipality mask (per tile)
+# 
+#   setwd("C:/Users/WestT/OneDrive - scion/Desktop/Mapbiomas_4.1/Fix_2")
+#   files = list.files(pattern=names[j]) #select raster names for the loop
+#   
+#   for (i in 1:c(length(files))) {
+#     r1 <- raster(files[[i]])
+#     r2 <- calc(r1, fun=function(x){ x[ x != 1 ] <- 0; return(x)}, filename='over_tmp.grd', overwrite=TRUE) #to sum only forest pixels (=1)
+#     temp <- as.data.frame(zonal(r2, muni_mask, fun='sum', na.rm=T)) #sum forest pixels
+#     colnames(temp) <- c("zone","forest")
+#     name <- strsplit(files[i], 'fix2_')[[1]][2]
+#     name <- strsplit(name, '.tif')
+#     temp$year_tile <- name
+#     res <- rbind(res, temp)
+#     rm(r1, r2)
+#     file.remove(c('over_tmp.grd','over_tmp.gri')) #remove temp files created
+#     print(name)
+#   }
 # }
-# colnames(res) <- c("munic",1997:2017)
-#
-# 4182443.05 #km2 Amazon biome area
-# 0.06109761 #conversion factor
-# 0.0625 #or this one
-#
-# #copy municipality code
-# res$code <- levels(munic)[[1]][,3]
-#
-# #setwd("F:/Data/Forest cover datasets/MapBiomas/Colection 3 - Amazonia stack 1985-2017")
-# write.csv(res, file = "jill_new_mapbiomas_munic.csv")
+# 
+# require(stringr)
+# for (i in 1:nrow(res)) {
+#   res$year[i] <- as.integer(str_split(res$year_tile, "_")[[i]][1])
+#   res$tile[i] <- as.integer(str_split(res$year_tile, "_")[[i]][2])
+# }
+# 
+# max(res$zone) #MUST BE 795 !!!!
+# 
+# require(foreign)
+# setwd("C:/Users/WestT/OneDrive - scion/Desktop/Mapbiomas_4.1/states_mask/")
+# ID <- read.dbf("muni3_code.dbf")
+# ID[0,]
+# ID <- ID[,c(2,5,8,11,14,17,20,23,26,29)]
+# 
+# ID$zone <- 0:c(nrow(ID)-1)
+# ID$code <- ifelse(!is.na(ID$CD_GEOCMU), as.character(ID$CD_GEOCMU),
+#                   ifelse(!is.na(ID$CD_GEOCM_1), as.character(ID$CD_GEOCM_1),
+#                          ifelse(!is.na(ID$CD_GEOCM_2), as.character(ID$CD_GEOCM_2),
+#                                 ifelse(!is.na(ID$CD_GEOCM_3), as.character(ID$CD_GEOCM_3),
+#                                        ifelse(!is.na(ID$CD_GEOCM_4), as.character(ID$CD_GEOCM_4),
+#                                               ifelse(!is.na(ID$CD_GEOCM_5), as.character(ID$CD_GEOCM_5),
+#                                                      ifelse(!is.na(ID$CD_GEOCM_6), as.character(ID$CD_GEOCM_6),
+#                                                             ifelse(!is.na(ID$CD_GEOCM_7), as.character(ID$CD_GEOCM_7),
+#                                                                    ifelse(!is.na(ID$CD_GEOCM_8), as.character(ID$CD_GEOCM_8),
+#                                                                           ifelse(!is.na(ID$CD_GEOCM_9), as.character(ID$CD_GEOCM_9),NA))))))))))
+#               
+# res$code <- ID[match(with(res, zone), with(ID, zone)),]$code
+# res$year_tile <- as.character(res$year_tile)
+# res$year <- as.integer(as.character(res$year))
+# 
+# setwd("C:/Users/WestT/OneDrive - scion/Desktop/Mapbiomas_4.1/")
+#write.csv(res, "forest_per_muni_mapbiomas_4.1.csv")
 
-"-------------------------------------------------------------------------------" #PART 11 Results summary----
-"STEP 12. Summary of results"
-"-------------------------------------------------------------------------------"
-#
-# rm(list=ls()) #clear all
-# require(reshape)
-# require(plyr)
-# #setwd("C:/Users/Thales/Desktop/Mapbiomas")
-# setwd("F:/Data/Forest cover datasets/MapBiomas/Colection 3 - Amazonia stack 1985-2017/")
-# res <- read.csv("forest_cover_results.csv")
-# res <- res[,-1]
-# res$munic <- as.factor(res$munic)
-# data <- melt(res, id=c("munic"))
-# colnames(data) <- c("munci", "year", "forest_pixel")
-# data$forest_km2 <- data$forest_pixel * 0.06109761 #from pixel to km2
-# data2 <- ddply(.data=data, .(year),.fun=summarise, forest = sum(forest_km2 , na.rm=T))
-#
-# require(DataCombine) #package to create lagged variable
-# def <- slide(data2, Var = "forest", slideBy = -1)
-# def$def <- (def[,2] - def[,3]) * -1
-# plot(def$year, def$def)
-#
-# write.csv(data, file = "forest_cover_munic_km2.csv")
+4182443.05 #km2 Amazon biome area
+
+require(plyr)
+require(Hmisc) #package to create lagged variable
+
+res <- read.csv("forest_per_muni_mapbiomas_4.1.csv")
+res <- res[,c(3,5:7)]
+muni <- unique(res$code)
+
+res_muni <- as.data.frame(matrix(NA,0,6))
+colnames(res_muni) <- c('code','year','forest','forest_lag','def_px','def_ha')
+
+for (i in 1:length(muni)) {
+  
+  temp <- subset(res, code==muni[i])
+  temp2 <- ddply(.data=temp, .(code, year), .fun=summarise, forest = sum(forest, na.rm=T))
+  
+  temp2$forest_lag <- Lag(temp2$forest, 1)
+  temp2$def_px <-  temp2$forest_lag -  temp2$forest
+  temp2$def_ha <-  temp2$def_px * 0.089
+  
+  res_muni <- rbind(res_muni, temp2)
+}
+
+res_muni <- subset(res_muni, year >2000 & year < 2017)
+write.csv(res_muni, "def_per_munic_mapbiomas_4.1.csv")
+
+#checking results
+plot <- ddply(.data=res_muni, .(year), .fun=summarise, def_ha = sum(def_ha, na.rm=T))
+require(ggplot2)
+ggplot(plot, aes(x=year, y=def_ha*0.01)) + geom_line() + labs(x = "Year", y = "Deforestation (km²)")
