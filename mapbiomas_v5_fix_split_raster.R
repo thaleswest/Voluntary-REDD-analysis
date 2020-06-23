@@ -658,7 +658,7 @@ for (i in 1:length(muni)) {
   
   temp2$forest_lag <- Lag(temp2$forest, 1)
   temp2$def_px <-  temp2$forest_lag -  temp2$forest
-  temp2$def_ha <-  temp2$def_px * 0.089
+  temp2$def_ha <-  temp2$def_px * 0.09
   
   res_muni <- rbind(res_muni, temp2)
 }
