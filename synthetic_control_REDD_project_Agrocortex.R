@@ -252,7 +252,6 @@ plot(years, data[gap.start:gap.end,which(colnames(data)==project.ID)],
      xaxs="i",yaxs="i")
 #add lines for control states
 for (i in 1:ncol(data)) { lines(years,data[gap.start:gap.end,i],col="gray") }
-#add Basque Line
 lines(years,data[gap.start:gap.end,which(colnames(data)==project.ID)],lwd=2,col="black")
 #add grid
 abline(v=project.start.date, lty="dotted",lwd=2)
