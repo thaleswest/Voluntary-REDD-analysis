@@ -1,12 +1,12 @@
-"-----------------------------------"
-"CODE FOR SYNTHETIC CONTROL ANALYSIS"
-"-----------------------------------"
+"--------------------------------------------------------------------------"
+"CODE FOR SYNTHETIC CONTROL ANALYSIS (based on Abadie et al. original code)"
+"--------------------------------------------------------------------------"
 library("Synth") #synthetic control package
 
 #PART 1 ------------------------------------------------------------------------------------------------------------------
 rm(list=ls()) #clear all
-setwd("C:/Users/WestT/Dropbox/REDD Impact/Codes for cumulative def rate matching")
-redd.data <- read.csv("redd_data_synth_mapbiomas_cummulative.csv")
+setwd("...") #data folder
+redd.data <- read.csv("redd_data_synth_mapbiomas_cummulative.csv") #name of the dataset
 redd.data <- subset(redd.data, def > -999)
 redd.data$ID.numeric <- as.numeric(redd.data$ID)
 redd.data$ID <- as.character(redd.data$ID)
@@ -17,7 +17,7 @@ unique(projects$ID) #"875"  "963"  "977"  "981"  "1094" "1112" "1113" "1115" "11
 #select one REDD project and delete the others and controls that should not be used
 project.ID <- "1686"
 project.start.date <- 2014
-#redd.data <- subset(redd.data, state == "AC")
+#redd.data <- subset(redd.data, state == "AC") #ideal subset based on state (only if it works)
 redd.data <- subset(redd.data, ind != 1 & REDD != 1 | ID == project.ID)
 
 project.area <- subset(redd.data, REDD == 1)[1,37] #37 is project area
@@ -41,7 +41,7 @@ controls.identifier <- unique(controls$ID.numeric)
 dataprep.out <-
   dataprep(foo = redd.data, #data name
            predictors = c("area",
-                          "for.cover",
+                          "for.cover", #cover at the start of the project
                           "capt", 
                           "hway",
                           "slope", 
@@ -65,7 +65,7 @@ dataprep.out <-
            time.variable = "year",
            treatment.identifier = treatment.identifier, #CAR polygon that is REDD+ project under evaluation
            controls.identifier = controls.identifier, #CAR polygons that are not REDD+ projects
-           time.optimize.ssr = 2010:c(project.start.date), #interval used for matching = 2001:project start date
+           time.optimize.ssr = 2001:c(project.start.date), #interval used for optimization, can vary (what matters the most is how good SC looks)
            time.plot = 2001:2017 #interval of entire analysis = 2001:2017
   )
 
@@ -110,7 +110,7 @@ abline(v=project.start.date, lty="dotted",lwd=2)
 arrows(c(project.start.date-1.5), line.placement, c(project.start.date-0.5), line.placement, col="black",length=.1)
 text(c(project.start.date-3.8), line.placement, "Project start date",cex=0.75)
 
-#save results for ggplot
+#save results for ggplot (to plot eveyrthing together later)
 ggplot.data <- as.data.frame(dataprep.out$Y1plot)
 ggplot.data[,2] <- dataprep.out$Y0plot %*% synth.out$solution.w
 ggplot.data[,3] <- "Agrocortex"
@@ -128,9 +128,9 @@ data.cf[0,]
 w <- subset(synth.tables$tab.w, w.weights != 0)
 data.cf$weight <- w[match(with(data.cf, ID), with(w, unit.names)),]$w.weights
 data.cf$w.def <- data.cf$def_cum * data.cf$weight
-write.csv(ggplot.data, "ggplot_Agrocortex_conf_inter.csv")
+write.csv(ggplot.data, "ggplot_Agrocortex_conf_inter.csv") #to be used later with the results from all other projects
 
-#plot gap between REDD+ project and synthetic control deforestation
+#plot gap between REDD+ project and synthetic control deforestation (just for a quick check)
 gaps.plot(synth.res = synth.out,
           dataprep.res = dataprep.out,
           Ylab = "Gap in deforestation (ha)",
@@ -229,11 +229,11 @@ for(iter in 1:length(ID.2$ID.2)) #loop to run placebos for each CAR polygon with
 #prepate plot figure
 data <- cbind(store, project_gap)
 colnames(data)[ncol(data)] <- project.ID
-rownames(data) <- 2001:2017 #1955:1997
+rownames(data) <- 2001:2017 
 #set bounds in gaps data
 gap.start     <- 1
 gap.end       <- nrow(data)
-years         <- 2001:2017 #1955:1997
+years         <- 2001:2017 
 gap.end.pre  <- which(rownames(data)==as.character(project.start.date))
 
 #MSPE Pre-Treatment
@@ -262,7 +262,7 @@ line.placement <- -55
 arrows(c(project.start.date-1.5), line.placement, c(project.start.date-0.5), line.placement, col="black",length=.1)
 text(c(project.start.date-3.8), line.placement, "Project start date",cex=0.75)
 
-#data for placebo ggplot
+#data for placebo ggplot (to be later combined with the results from all other projects)
 require(reshape2)
 ggplot.data.2 <- as.data.frame(data)
 ggplot.data.2$year <- 2001:2017
